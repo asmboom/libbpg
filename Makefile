@@ -3,7 +3,7 @@
 # Compile options:
 #
 # Enable compilation of Javascript decoder with Emscripten
-#USE_EMCC=y
+USE_EMCC=y
 # Enable x265 for the encoder (you must install it before)
 #USE_X265=y
 # Enable the JCTVC code (best quality but slow) for the encoder
@@ -29,8 +29,8 @@ CROSS_PREFIX:=
 EXE:=
 endif
 
-CC=$(CROSS_PREFIX)gcc
-CXX=$(CROSS_PREFIX)g++
+CC=$(CROSS_PREFIX)gcc-4.7
+CXX=$(CROSS_PREFIX)g++-4.7
 AR=$(CROSS_PREFIX)ar
 EMCC=emcc
 

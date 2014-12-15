@@ -51,15 +51,19 @@ load: function(url)
     var this1 = this;
 
     request.open("get", url, true);
+    request._uid = url.split('/').pop();
     request.responseType = "arraybuffer";
     request.onload = function(event) {
         this1._onload(request, event);
     };
     request.send();
+    return request;
 },
 
 _onload: function(request, event)
 {
+    console.time( 'bpgdec#_onload' )
+
     var data = request.response;
     var array = new Uint8Array(data);
     var img, w, h, img_info_buf, cimg, p0, rgba_line, w4;
@@ -69,11 +73,13 @@ _onload: function(request, event)
 
     img = this.bpg_decoder_open();
 
+    console.time( 'bpgdec#decode' );
     if (this.bpg_decoder_decode(img, array, array.length) < 0) {
         console.log("could not decode image");
         return;
     }
-    
+    console.timeEnd( 'bpgdec#decode' );
+
     img_info_buf = this.malloc(6 * 4);
     this.bpg_decoder_get_info(img, img_info_buf);
     /* extract the image info */
@@ -82,8 +88,8 @@ _onload: function(request, event)
     h = heap32[(img_info_buf + 4) >> 2];
     this.free(img_info_buf);
 
-//    console.log("image " + w + " " + h);
-    
+    console.log( request._uid + " " + w + ", " + h );
+
     /* select RGBA32 output */
     this.bpg_decoder_start(img, 1);
 
@@ -106,63 +112,11 @@ _onload: function(request, event)
     this.bpg_decoder_close(img);
 
     this['imageData'] = cimg;
-    
+
+    console.timeEnd( 'bpgdec#_onload' )
+
     if (this['onload'])
         this['onload']();
 }
 
-};
-
-window.onload = function() { 
-    var i, n, el, tab, tab1, url, dec, canvas, id, style, ctx, dw, dh;
-
-    /* put all images to load in a separate array */
-    tab = document.images;
-    n = tab.length;
-    tab1 = [];
-    for(i = 0; i < n; i++) {
-        el = tab[i];
-        url = el.src;
-        if (url.substr(-4,4).toLowerCase() == ".bpg") {
-            tab1[tab1.length] = el;
-        }
-    }
-
-    /* change the tags to canvas */
-    n = tab1.length;
-    for(i = 0; i < n; i++) {
-        el = tab1[i];
-        url = el.src;
-        canvas = document.createElement("canvas");
-
-        if (el.id)
-            canvas.id = el.id;
-        if (el.className)
-            canvas.className = el.className;
-
-        /* handle simple attribute cases to resize the canvas */
-        dw = el.getAttribute("width") | 0;
-        if (dw) {
-            canvas.style.width = dw + "px";
-        }
-        dh = el.getAttribute("height") | 0;
-        if (dh) {
-            canvas.style.height = dh + "px";
-        }
-
-        el.parentNode.replaceChild(canvas, el);
-
-        ctx = canvas.getContext("2d");
-        dec = new BPGDecoder(ctx);
-        dec.onload = (function(canvas, ctx) {
-            var imageData = this['imageData'];
-            /* resize the canvas to the image size */
-            canvas.width = imageData.width;
-            canvas.height = imageData.height;
-
-            /* draw the image */
-            ctx.putImageData(imageData, 0, 0);
-        }).bind(dec, canvas, ctx);
-        dec.load(url);
-    }
 };
